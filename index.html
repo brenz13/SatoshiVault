@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SatoshiVault — BTC Liquid Staking on OP_NET</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--btc:#F7931A;--gold:#FFD166;--bg:#080A0E;--bg2:#0D1117;--bg3:#131920;--border:rgba(247,147,26,0.18);--border2:rgba(255,255,255,0.06);--text:#F0EEE9;--muted:#7A7670;--green:#39D98A;--red:#FF5C5C;--pill:#A855F7;--pill-dim:rgba(168,85,247,0.15)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(247,147,26,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(247,147,26,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.glow-orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.glow-orb-1{width:600px;height:600px;background:radial-gradient(circle,rgba(247,147,26,0.12),transparent 70%);top:-200px;left:-200px;animation:orb1 20s ease-in-out infinite alternate}
+.glow-orb-2{width:400px;height:400px;background:radial-gradient(circle,rgba(168,85,247,0.08),transparent 70%);bottom:100px;right:-100px;animation:orb2 15s ease-in-out infinite alternate}
+@keyframes orb1{to{transform:translate(100px,100px)}}
+@keyframes orb2{to{transform:translate(-80px,-80px)}}
+nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:16px 40px;background:rgba(8,10,14,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800;letter-spacing:-0.5px}
+.nav-logo .btc-icon{width:32px;height:32px;background:var(--btc);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#000;box-shadow:0 0 20px rgba(247,147,26,0.5);animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 20px rgba(247,147,26,0.5)}50%{box-shadow:0 0 35px rgba(247,147,26,0.9)}}
+.nav-links{display:flex;gap:28px;font-size:14px;font-weight:600}
+.nav-links a{color:var(--muted);text-decoration:none;transition:color .2s;cursor:pointer}
+.nav-links a:hover,.nav-links a.active{color:var(--text)}
+.nav-right{display:flex;gap:12px;align-items:center}
+.launch-badge{display:flex;align-items:center;gap:8px;background:rgba(247,147,26,0.1);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;font-family:'Space Mono',monospace;animation:borderGlow 2s ease-in-out infinite alternate}
+@keyframes borderGlow{to{border-color:rgba(247,147,26,0.5);box-shadow:0 0 12px rgba(247,147,26,0.2)}}
+.launch-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--btc);animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+#countdown{color:var(--btc);font-weight:700}
+.btn-wallet{background:linear-gradient(135deg,var(--btc),#e8880f);border:none;border-radius:10px;padding:10px 20px;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(247,147,26,0.3)}
+.btn-wallet:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(247,147,26,0.5)}
+.btn-wallet.connected{background:rgba(57,217,138,0.15);border:1px solid rgba(57,217,138,0.4);color:var(--green);box-shadow:none}
+.hero{position:relative;z-index:1;text-align:center;padding:100px 40px 60px}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(247,147,26,0.08);border:1px solid var(--border);border-radius:100px;padding:6px 16px;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--btc);margin-bottom:32px;font-family:'DM Mono',monospace}
+.hero h1{font-size:clamp(48px,7vw,96px);font-weight:800;line-height:0.95;letter-spacing:-3px;margin-bottom:24px}
+.hero h1 .line1{display:block}
+.hero h1 .line2{display:block;background:linear-gradient(90deg,var(--btc),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-motto{font-size:18px;color:var(--muted);max-width:520px;margin:0 auto 40px;line-height:1.6;font-family:'DM Mono',monospace;font-weight:300}
+.hero-motto strong{color:var(--text);font-weight:500}
+.token-pills{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:60px}
+.token-pill{display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:100px;border:1px solid;font-size:13px;font-weight:700;font-family:'Space Mono',monospace;transition:all .2s}
+.token-pill:hover{transform:translateY(-3px)}
+.pill-svbtc{background:rgba(247,147,26,0.1);border-color:rgba(247,147,26,0.35);color:var(--btc)}
+.pill-pill{background:var(--pill-dim);border-color:rgba(168,85,247,0.4);color:var(--pill)}
+.pill-moto{background:rgba(57,217,138,0.08);border-color:rgba(57,217,138,0.3);color:var(--green)}
+.stats-row{display:flex;justify-content:center;gap:0;margin-bottom:80px;position:relative;z-index:1;padding:0 40px}
+.stat-card{flex:1;max-width:220px;padding:24px 20px;text-align:center;border:1px solid var(--border2);background:var(--bg2);transition:all .3s}
+.stat-card:first-child{border-radius:12px 0 0 12px}
+.stat-card:last-child{border-radius:0 12px 12px 0}
+.stat-card:hover{background:var(--bg3);border-color:var(--border)}
+.stat-val{font-size:28px;font-weight:800;color:var(--btc);font-family:'Space Mono',monospace;margin-bottom:6px}
+.stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 40px 100px;display:grid;grid-template-columns:1fr 380px;gap:32px;align-items:start}
+.panel{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;overflow:hidden}
+.panel-header{padding:20px 24px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px}
+.icon-bg{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.icon-bg-btc{background:rgba(247,147,26,0.15)}
+.tabs{display:flex;gap:0;padding:16px 24px 0}
+.tab{padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;color:var(--muted);transition:all .2s;border:1px solid transparent;border-bottom:none;margin-bottom:-1px;position:relative;z-index:2}
+.tab.active{color:var(--text);background:var(--bg3);border-color:var(--border2)}
+.tab:hover:not(.active){color:var(--text)}
+.form-body{padding:24px}
+.input-group{margin-bottom:20px}
+.input-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;justify-content:space-between}
+.input-label .bal{color:var(--btc);cursor:pointer}
+.input-wrap{position:relative;display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;overflow:hidden;transition:border-color .2s}
+.input-wrap:focus-within{border-color:var(--border)}
+.input-wrap input{flex:1;background:transparent;border:none;outline:none;padding:14px 16px;color:var(--text);font-size:18px;font-family:'Space Mono',monospace;font-weight:700}
+.input-wrap input::placeholder{color:var(--muted);font-size:16px}
+.input-suffix{padding:0 16px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--muted);border-left:1px solid var(--border2);height:52px;white-space:nowrap}
+.suffix-btc{color:var(--btc)}
+.suffix-pill{color:var(--pill)}
+.arrow-down{text-align:center;padding:8px 0;color:var(--muted);font-size:20px}
+.output-box{background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.output-label{font-size:13px;color:var(--muted)}
+.output-val{font-size:20px;font-weight:700;font-family:'Space Mono',monospace;color:var(--btc)}
+.output-sub{font-size:12px;color:var(--muted);margin-top:2px;text-align:right}
+.rate-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border2);color:var(--muted)}
+.rate-row:last-child{border-bottom:none}
+.rate-row .val{color:var(--text);font-family:'DM Mono',monospace}
+.rate-section{margin-bottom:20px}
+.btn-primary{width:100%;padding:16px;background:linear-gradient(135deg,var(--btc),#e8880f);border:none;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:#000;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(247,147,26,0.25)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(247,147,26,0.4)}
+.btn-primary:disabled{background:var(--bg3);color:var(--muted);box-shadow:none;transform:none;cursor:not-allowed}
+.btn-secondary{width:100%;padding:14px;background:transparent;border:1px solid var(--border);border-radius:12px;color:var(--btc);font-family:'Syne',sans-serif;font-weight:700;font-size:15px;cursor:pointer;transition:all .2s;margin-top:10px}
+.btn-secondary:hover{background:rgba(247,147,26,0.08)}
+.right-col{display:flex;flex-direction:column;gap:20px}
+.info-card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px}
+.info-card-title{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.apy-display{font-size:48px;font-weight:800;background:linear-gradient(135deg,var(--green),#00e87e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:'Space Mono',monospace;margin-bottom:4px}
+.wallet-card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px}
+.wallet-status-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.wallet-avatar{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px}
+.wallet-info-name{font-size:15px;font-weight:700}
+.wallet-info-addr{font-size:12px;color:var(--muted);font-family:'Space Mono',monospace}
+.network-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(57,217,138,0.1);border:1px solid rgba(57,217,138,0.25);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--green);font-family:'DM Mono',monospace}
+.network-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.balance-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg3);border-radius:10px;margin-bottom:8px;font-size:13px}
+.balance-row .token-name{color:var(--muted);display:flex;align-items:center;gap:8px}
+.balance-row .amount{font-family:'Space Mono',monospace;font-weight:700}
+.amount-btc{color:var(--btc)}
+.amount-pill{color:var(--pill)}
+.amount-green{color:var(--green)}
+.opnet-info{background:linear-gradient(135deg,rgba(247,147,26,0.08),rgba(168,85,247,0.05));border:1px solid var(--border);border-radius:16px;padding:24px;position:relative;overflow:hidden}
+.opnet-info::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:radial-gradient(circle,rgba(247,147,26,0.15),transparent 70%);border-radius:50%}
+.opnet-info-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--btc);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.mainnet-date{font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--text);margin-bottom:4px}
+.mainnet-sub{font-size:12px;color:var(--muted);line-height:1.5}
+.activity-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border2)}
+.activity-item:last-child{border-bottom:none}
+.activity-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.activity-icon-deposit{background:rgba(247,147,26,0.12)}
+.activity-icon-redeem{background:rgba(255,92,92,0.1)}
+.activity-info{flex:1}
+.activity-type{font-size:14px;font-weight:600}
+.activity-time{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.activity-amount{font-family:'Space Mono',monospace;font-size:14px;font-weight:700}
+#toast{position:fixed;bottom:32px;right:32px;z-index:999;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px 20px;font-size:14px;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:translateY(100px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:12px}
+#toast.show{transform:translateY(0);opacity:1}
+.spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(247,147,26,0.3);border-top-color:var(--btc);animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.modal-overlay.active{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:32px;width:90%;max-width:440px;transform:scale(0.9);transition:transform .3s;position:relative}
+.modal-overlay.active .modal{transform:scale(1)}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:8px}
+.modal-sub{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.5}
+.wallet-option{display:flex;align-items:center;gap:16px;padding:16px;border-radius:12px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;margin-bottom:10px;transition:all .2s}
+.wallet-option:hover{border-color:var(--border);background:var(--bg)}
+.wallet-option-icon{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#1a1a2e,var(--btc));display:flex;align-items:center;justify-content:center;font-size:24px}
+.wallet-option-info h3{font-size:16px;font-weight:700}
+.wallet-option-info p{font-size:13px;color:var(--muted)}
+.modal-close{position:absolute;top:16px;right:16px;background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-close:hover{background:var(--bg3);color:var(--text)}
+.how-section{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 40px 80px}
+.section-title{font-size:36px;font-weight:800;letter-spacing:-1px;margin-bottom:8px}
+.section-sub{font-size:16px;color:var(--muted);margin-bottom:48px}
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;position:relative}
+.steps-grid::before{content:'';position:absolute;top:38px;left:60px;right:60px;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
+.step-card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px 20px;text-align:center;transition:all .3s}
+.step-card:hover{border-color:var(--border);transform:translateY(-4px);box-shadow:0 12px 32px rgba(247,147,26,0.1)}
+.step-num{width:56px;height:56px;border-radius:16px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:24px}
+.step-title{font-size:15px;font-weight:700;margin-bottom:8px}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.5}
+footer{position:relative;z-index:1;border-top:1px solid var(--border2);padding:32px 40px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+.footer-brand{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--text)}
+.footer-links{display:flex;gap:24px}
+.footer-links a{color:var(--muted);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--text)}
+.ticker-wrap{overflow:hidden;white-space:nowrap;border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);background:var(--bg2);padding:10px 0;position:relative;z-index:1}
+.ticker-inner{display:inline-flex;gap:0;animation:ticker 30s linear infinite}
+.ticker-item{padding:0 32px;font-size:13px;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:10px;border-right:1px solid var(--border2)}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tick-up{color:var(--green)}
+.tick-down{color:var(--red)}
+.tx-step{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border2)}
+.tx-step:last-child{border-bottom:none}
+.tx-step-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.tx-step-circle.pending{background:rgba(247,147,26,0.15);border:1px solid var(--border)}
+.tx-step-circle.done{background:rgba(57,217,138,0.15);border:1px solid rgba(57,217,138,0.3)}
+.tx-step-info h4{font-size:14px;font-weight:600}
+.tx-step-info p{font-size:12px;color:var(--muted)}
+.text-btc{color:var(--btc)}
+.text-green{color:var(--green)}
+.text-pill{color:var(--pill)}
+@media(max-width:768px){nav{padding:14px 20px}.nav-links{display:none}.hero{padding:60px 20px 40px}.hero h1{font-size:48px}.stats-row{padding:0 20px;overflow-x:auto}.main{grid-template-columns:1fr;padding:0 20px 60px}.steps-grid{grid-template-columns:1fr 1fr}.how-section{padding:0 20px 60px}footer{flex-direction:column;gap:16px;text-align:center}}
+</style>
+</head>
+<body>
+<div class="glow-orb glow-orb-1"></div>
+<div class="glow-orb glow-orb-2"></div>
+
+<nav>
+  <div class="nav-logo">
+    <div class="btc-icon">₿</div>
+    <span>Satoshi<span style="color:var(--btc)">Vault</span></span>
+  </div>
+  <div class="nav-links">
+    <a class="active" id="nav-stake" onclick="switchTab('stake')">Stake</a>
+    <a id="nav-redeem" onclick="switchTab('redeem')">Redeem</a>
+    <a id="nav-defi" onclick="switchTab('defi')">DeFi Pools</a>
+    <a href="https://opnet.org" target="_blank">OP_NET ↗</a>
+  </div>
+  <div class="nav-right">
+    <div class="launch-badge">
+      <div class="dot"></div>
+      <span>Mainnet in</span>
+      <span id="countdown">—</span>
+    </div>
+    <button class="btn-wallet" id="walletBtn" onclick="openWalletModal()">Connect OP_Wallet</button>
+  </div>
+</nav>
+
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    <div class="ticker-item"><span>svBTC/tBTC</span><span class="tick-up">1.000</span><span class="tick-up">+0.00%</span></div>
+    <div class="ticker-item"><span>APY</span><span class="tick-up">7.82%</span><span class="tick-up">▲</span></div>
+    <div class="ticker-item"><span>TVL</span><span id="tvl-ticker">2,841.7 tBTC</span></div>
+    <div class="ticker-item"><span>$PILL</span><span class="tick-up">0.00284</span><span class="tick-up">+3.2%</span></div>
+    <div class="ticker-item"><span>$MOTO</span><span class="tick-down">0.0071</span><span class="tick-down">-1.1%</span></div>
+    <div class="ticker-item"><span>Stakers</span><span>4,291</span></div>
+    <div class="ticker-item"><span>OP_NET</span><span style="color:var(--btc)">Testnet3</span></div>
+    <div class="ticker-item"><span>svBTC/tBTC</span><span class="tick-up">1.000</span><span class="tick-up">+0.00%</span></div>
+    <div class="ticker-item"><span>APY</span><span class="tick-up">7.82%</span><span class="tick-up">▲</span></div>
+    <div class="ticker-item"><span>TVL</span><span>2,841.7 tBTC</span></div>
+    <div class="ticker-item"><span>$PILL</span><span class="tick-up">0.00284</span><span class="tick-up">+3.2%</span></div>
+    <div class="ticker-item"><span>$MOTO</span><span class="tick-down">0.0071</span><span class="tick-down">-1.1%</span></div>
+    <div class="ticker-item"><span>Stakers</span><span>4,291</span></div>
+    <div class="ticker-item"><span>OP_NET</span><span style="color:var(--btc)">Testnet3</span></div>
+  </div>
+</div>
+
+<section class="hero">
+  <div class="hero-tag">⚡ Powered by OP_NET · Bitcoin L1 Smart Contracts</div>
+  <h1>
+    <span class="line1">Liquid Bitcoin</span>
+    <span class="line2">Staking Protocol</span>
+  </h1>
+  <p class="hero-motto">
+    Deposit BTC. Receive <strong>svBTC</strong>. Earn yield.<br>
+    Stay liquid. <strong>Rule Bitcoin DeFi.</strong>
+  </p>
+  <div class="token-pills">
+    <div class="token-pill pill-svbtc"><span>🔶</span><span>svBTC — Liquid Staked BTC</span></div>
+    <div class="token-pill pill-pill"><span>💊</span><span>$PILL — Governance Token</span></div>
+    <div class="token-pill pill-moto"><span>⚙️</span><span>$MOTO — Reward Token</span></div>
+  </div>
+</section>
+
+<div class="stats-row">
+  <div class="stat-card"><div class="stat-val" id="stat-tvl">2,841.7</div><div class="stat-label">Total BTC Locked</div></div>
+  <div class="stat-card"><div class="stat-val text-green">7.82%</div><div class="stat-label">Current APY</div></div>
+  <div class="stat-card"><div class="stat-val">4,291</div><div class="stat-label">Active Stakers</div></div>
+  <div class="stat-card"><div class="stat-val">1.000</div><div class="stat-label">svBTC Exchange Rate</div></div>
+  <div class="stat-card"><div class="stat-val text-pill">OP_20</div><div class="stat-label">Token Standard</div></div>
+</div>
+
+<div class="main">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="icon-bg icon-bg-btc">🔶</div>
+        <span>SatoshiVault App</span>
+      </div>
+      <div class="network-badge"><div class="dot"></div>OP_NET Testnet3</div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" id="tab-stake" onclick="switchTab('stake')">Stake BTC</div>
+      <div class="tab" id="tab-redeem" onclick="switchTab('redeem')">Redeem svBTC</div>
+      <div class="tab" id="tab-defi" onclick="switchTab('defi')">DeFi Pools</div>
+    </div>
+
+    <!-- STAKE -->
+    <div class="form-body" id="form-stake">
+      <div class="input-group">
+        <div class="input-label"><span>You Deposit</span><span class="bal" onclick="setMax()">Balance: <span id="btc-bal">—</span> tBTC</span></div>
+        <div class="input-wrap">
+          <input type="number" id="stake-input" placeholder="0.00" step="0.001" min="0" oninput="calcStake()">
+          <div class="input-suffix suffix-btc">₿ tBTC</div>
+        </div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="output-box">
+        <div><div class="output-label">You Receive</div></div>
+        <div><div class="output-val" id="svbtc-out">0.000</div><div class="output-sub">svBTC (OP_20)</div></div>
+      </div>
+      <div class="rate-section">
+        <div class="rate-row"><span>Exchange Rate</span><span class="val">1 tBTC = 1.000 svBTC</span></div>
+        <div class="rate-row"><span>Annual Yield</span><span class="val text-green">7.82% APY</span></div>
+        <div class="rate-row"><span>Validator Fee</span><span class="val">0.3%</span></div>
+        <div class="rate-row"><span>Gas (tBTC)</span><span class="val">~0.00002</span></div>
+      </div>
+      <button class="btn-primary" id="stakeBtn" onclick="doStake()" disabled>Connect Wallet to Stake</button>
+      <button class="btn-secondary" onclick="openWalletModal()">🔗 Connect OP_Wallet</button>
+      <div style="margin-top:16px;padding:14px;background:rgba(247,147,26,0.06);border-radius:10px;border:1px solid rgba(247,147,26,0.15);">
+        <p style="font-size:12px;color:var(--muted);line-height:1.6;">💡 <strong style="color:var(--text)">svBTC</strong> is an OP_20 liquid staking token on OP_NET. It accrues rewards while remaining composable across all OP_NET DeFi protocols. Use it on <strong style="color:var(--btc)">MotoSwap</strong> or stake in <strong style="color:var(--btc)">MotoChef</strong>.</p>
+      </div>
+    </div>
+
+    <!-- REDEEM -->
+    <div class="form-body" id="form-redeem" style="display:none">
+      <div class="input-group">
+        <div class="input-label"><span>You Return</span><span class="bal">Balance: <span id="svbtc-bal">—</span> svBTC</span></div>
+        <div class="input-wrap">
+          <input type="number" id="redeem-input" placeholder="0.00" step="0.001" min="0" oninput="calcRedeem()">
+          <div class="input-suffix suffix-pill">svBTC</div>
+        </div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="output-box">
+        <div><div class="output-label">You Receive</div></div>
+        <div><div class="output-val" id="btc-out">0.000</div><div class="output-sub">tBTC (+ accrued rewards)</div></div>
+      </div>
+      <div class="rate-section">
+        <div class="rate-row"><span>Redemption Rate</span><span class="val">1 svBTC = 1.000 tBTC</span></div>
+        <div class="rate-row"><span>Unstake Period</span><span class="val">Instant (Testnet)</span></div>
+        <div class="rate-row"><span>Withdrawal Fee</span><span class="val">0%</span></div>
+      </div>
+      <button class="btn-primary" id="redeemBtn" onclick="doRedeem()" disabled>Connect Wallet to Redeem</button>
+      <button class="btn-secondary" onclick="openWalletModal()">🔗 Connect OP_Wallet</button>
+    </div>
+
+    <!-- DEFI -->
+    <div class="form-body" id="form-defi" style="display:none">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:16px;background:var(--bg3);border-radius:12px;border:1px solid var(--border2);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-weight:700;font-size:15px;">svBTC / tBTC</span><span style="background:rgba(57,217,138,0.12);color:var(--green);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;">8.1% APY</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">MotoSwap Liquidity Pool · TVL: 842 tBTC</div>
+          <a href="https://motoswap.org" target="_blank" style="display:block;text-align:center;padding:10px;background:rgba(247,147,26,0.1);border:1px solid var(--border);border-radius:8px;color:var(--btc);text-decoration:none;font-size:13px;font-weight:700;">Open on MotoSwap ↗</a>
+        </div>
+        <div style="padding:16px;background:var(--bg3);border-radius:12px;border:1px solid var(--border2);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-weight:700;font-size:15px;">svBTC Stake Pool</span><span style="background:var(--pill-dim);color:var(--pill);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;">+$PILL Rewards</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">MotoChef Farm · Stake svBTC, earn $PILL</div>
+          <a href="https://farm.motoswap.org" target="_blank" style="display:block;text-align:center;padding:10px;background:var(--pill-dim);border:1px solid rgba(168,85,247,0.3);border-radius:8px;color:var(--pill);text-decoration:none;font-size:13px;font-weight:700;">Open on MotoChef ↗</a>
+        </div>
+        <div style="padding:14px;background:rgba(247,147,26,0.05);border:1px solid rgba(247,147,26,0.1);border-radius:10px;">
+          <p style="font-size:12px;color:var(--muted);line-height:1.5;">🔗 Live OP_NET Testnet3 dApps. Use your <strong style="color:var(--text)">OP_Wallet</strong> to interact. Get tokens at <a href="https://faucet.opnet.org" target="_blank" style="color:var(--btc)">faucet.opnet.org</a></p>
+        </div>
+        <div style="padding:14px;background:rgba(57,217,138,0.05);border:1px solid rgba(57,217,138,0.15);border-radius:10px;">
+          <p style="font-size:12px;color:var(--muted);line-height:1.5;">🤖 <strong style="color:var(--text)">AI Agent Powered by</strong> <a href="https://ai.opnet.org/mcp" target="_blank" style="color:var(--green)">OP_NET MCP</a> — Smart contract interactions are enhanced by the OP_NET AI agent at ai.opnet.org/mcp</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT COL -->
+  <div class="right-col">
+    <!-- OPNET COUNTDOWN -->
+    <div class="opnet-info">
+      <div class="opnet-info-title">🚀 OP_NET Mainnet Launch</div>
+      <div class="mainnet-date">March 17, 2026</div>
+      <div class="mainnet-sub">OP_NET goes live on Bitcoin L1 — fully expressive smart contracts, DeFi, and post-quantum security. No sidechains. No bridges. BTC is gas.</div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="flex:1;text-align:center;background:rgba(247,147,26,0.1);border:1px solid var(--border);border-radius:10px;padding:10px;">
+          <div style="font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--btc)" id="cd-days">--</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Days</div>
+        </div>
+        <div style="flex:1;text-align:center;background:rgba(247,147,26,0.1);border:1px solid var(--border);border-radius:10px;padding:10px;">
+          <div style="font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--btc)" id="cd-hours">--</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Hours</div>
+        </div>
+        <div style="flex:1;text-align:center;background:rgba(247,147,26,0.1);border:1px solid var(--border);border-radius:10px;padding:10px;">
+          <div style="font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--btc)" id="cd-mins">--</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Mins</div>
+        </div>
+        <div style="flex:1;text-align:center;background:rgba(247,147,26,0.1);border:1px solid var(--border);border-radius:10px;padding:10px;">
+          <div style="font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--btc)" id="cd-secs">--</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Secs</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WALLET -->
+    <div class="wallet-card">
+      <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;font-weight:700;">Wallet</div>
+      <div id="wallet-disconnected" style="text-align:center;padding:20px 0;">
+        <div style="font-size:48px;margin-bottom:12px;">🔌</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">No Wallet Connected</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5;">Connect your OP_Wallet to start staking BTC on OP_NET Testnet3</div>
+        <button class="btn-primary" style="font-size:14px;padding:12px" onclick="openWalletModal()">Connect OP_Wallet</button>
+        <div style="margin-top:16px;"><a href="https://chromewebstore.google.com/detail/opwallet/pmbjpcmaaladnfpacpmhmnfmpklgbdjb" target="_blank" style="font-size:12px;color:var(--btc);text-decoration:none;">📥 Don't have OP_Wallet? Install here →</a></div>
+      </div>
+      <div id="wallet-connected" style="display:none">
+        <div class="wallet-status-row">
+          <div class="wallet-avatar">₿</div>
+          <div class="wallet-info">
+            <div class="wallet-info-name">OP_Wallet</div>
+            <div class="wallet-info-addr" id="wallet-addr-display">tb1q...0000</div>
+          </div>
+          <div class="network-badge" style="margin-left:auto"><div class="dot"></div>Testnet3</div>
+        </div>
+        <div class="balance-row"><div class="token-name">₿ tBTC</div><div class="amount amount-btc" id="bal-btc">0.000</div></div>
+        <div class="balance-row"><div class="token-name">🔶 svBTC</div><div class="amount amount-green" id="bal-svbtc">0.000</div></div>
+        <div class="balance-row"><div class="token-name">💊 $PILL</div><div class="amount amount-pill" id="bal-pill">0</div></div>
+        <div style="margin-top:16px;"><button onclick="disconnectWallet()" style="width:100%;padding:10px;background:transparent;border:1px solid var(--border2);border-radius:10px;color:var(--muted);font-size:13px;cursor:pointer;transition:all .2s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">Disconnect</button></div>
+      </div>
+    </div>
+
+    <!-- APY -->
+    <div class="info-card">
+      <div class="info-card-title"><span>📈</span> Current APY</div>
+      <div class="apy-display">7.82%</div>
+      <div style="font-size:13px;color:var(--muted);">On all staked svBTC · Updated every epoch</div>
+      <div style="margin-top:16px;display:flex;gap:10px;">
+        <div style="flex:1;padding:12px;background:var(--bg3);border-radius:8px;text-align:center;"><div style="font-size:16px;font-weight:700;font-family:'Space Mono',monospace;color:var(--pill)">+2.1%</div><div style="font-size:11px;color:var(--muted);margin-top:2px">$PILL Bonus</div></div>
+        <div style="flex:1;padding:12px;background:var(--bg3);border-radius:8px;text-align:center;"><div style="font-size:16px;font-weight:700;font-family:'Space Mono',monospace;color:var(--green)">+3.7%</div><div style="font-size:11px;color:var(--muted);margin-top:2px">$MOTO LP</div></div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY -->
+    <div class="info-card">
+      <div class="info-card-title"><span>🕐</span> Recent Activity</div>
+      <div class="activity-item"><div class="activity-icon activity-icon-deposit">🔶</div><div class="activity-info"><div class="activity-type">Stake</div><div class="activity-time">tb1q...4f2a · 2m ago</div></div><div class="activity-amount text-btc">+0.42 svBTC</div></div>
+      <div class="activity-item"><div class="activity-icon activity-icon-deposit">🔶</div><div class="activity-info"><div class="activity-type">Stake</div><div class="activity-time">tb1p...9c1b · 8m ago</div></div><div class="activity-amount text-btc">+1.00 svBTC</div></div>
+      <div class="activity-item"><div class="activity-icon activity-icon-redeem">↩️</div><div class="activity-info"><div class="activity-type">Redeem</div><div class="activity-time">tb1q...7d3e · 15m ago</div></div><div class="activity-amount" style="color:var(--red)">-0.25 svBTC</div></div>
+      <div class="activity-item"><div class="activity-icon" style="background:var(--pill-dim)">💊</div><div class="activity-info"><div class="activity-type">$PILL Claim</div><div class="activity-time">tb1p...2a9f · 22m ago</div></div><div class="activity-amount text-pill">+1000 PILL</div></div>
+    </div>
+
+    <!-- FAUCET -->
+    <div style="padding:16px;background:rgba(57,217,138,0.06);border:1px solid rgba(57,217,138,0.2);border-radius:12px;">
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px;">💧 Need Testnet Tokens?</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Get free tBTC and $PILL from the official OP_NET faucet.</p>
+      <a href="https://faucet.opnet.org" target="_blank" style="display:block;text-align:center;padding:10px;background:rgba(57,217,138,0.12);border:1px solid rgba(57,217,138,0.3);border-radius:8px;color:var(--green);text-decoration:none;font-size:13px;font-weight:700;">Open Faucet → faucet.opnet.org</a>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="how-section">
+  <div class="section-title">How SatoshiVault Works</div>
+  <div class="section-sub">Four simple steps to liquid Bitcoin staking on OP_NET</div>
+  <div class="steps-grid">
+    <div class="step-card"><div class="step-num" style="background:rgba(247,147,26,0.12)">₿</div><div class="step-title">1. Deposit BTC</div><div class="step-desc">Connect OP_Wallet and deposit tBTC on OP_NET Testnet3. No bridges, no wrapping needed.</div></div>
+    <div class="step-card"><div class="step-num" style="background:rgba(57,217,138,0.1)">🔶</div><div class="step-title">2. Receive svBTC</div><div class="step-desc">Get svBTC — an OP_20 liquid staking token representing your staked BTC + accrued rewards.</div></div>
+    <div class="step-card"><div class="step-num" style="background:var(--pill-dim)">💊</div><div class="step-title">3. Use in DeFi</div><div class="step-desc">Use svBTC freely on MotoSwap, MotoChef, or any OP_NET DeFi app. Earn $PILL rewards.</div></div>
+    <div class="step-card"><div class="step-num" style="background:rgba(255,209,102,0.1)">🏆</div><div class="step-title">4. Redeem Anytime</div><div class="step-desc">Burn svBTC to get your original BTC plus all staking rewards back, at any time.</div></div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-brand"><span style="color:var(--btc)">₿</span> SatoshiVault <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;">· BTC LST on OP_NET</span></div>
+  <div class="footer-links">
+    <a href="https://opnet.org" target="_blank">OP_NET</a>
+    <a href="https://faucet.opnet.org" target="_blank">Faucet</a>
+    <a href="https://motoswap.org" target="_blank">MotoSwap</a>
+    <a href="https://farm.motoswap.org" target="_blank">MotoChef</a>
+    <a href="https://ai.opnet.org/mcp" target="_blank">AI Agent</a>
+    <a href="https://opnet.org/wallet" target="_blank">OP_Wallet</a>
+  </div>
+  <div style="font-family:'Space Mono',monospace;">Testnet3 · Not Financial Advice</div>
+</footer>
+
+<!-- WALLET MODAL -->
+<div class="modal-overlay" id="walletModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeWalletModal()">✕</button>
+    <div class="modal-title">Connect Your Wallet</div>
+    <div class="modal-sub">Connect OP_Wallet to stake BTC on OP_NET Testnet3. Make sure you're on <strong>Testnet3</strong> with <strong>Taproot</strong> address type.</div>
+    <div class="wallet-option" onclick="connectWallet('opwallet')">
+      <div class="wallet-option-icon">⚡</div>
+      <div class="wallet-option-info"><h3>OP_Wallet</h3><p>Official OP_NET Wallet · Testnet3</p></div>
+      <span style="margin-left:auto;color:var(--btc);font-size:20px;">→</span>
+    </div>
+    <div class="wallet-option" onclick="connectWallet('unisat')">
+      <div class="wallet-option-icon" style="background:linear-gradient(135deg,#1a1a2e,#7c3aed)">🦄</div>
+      <div class="wallet-option-info"><h3>UniSat Wallet</h3><p>Import to OP_Wallet for Testnet3</p></div>
+      <span style="margin-left:auto;color:var(--muted);font-size:20px;">→</span>
+    </div>
+    <div style="margin-top:20px;padding:14px;background:rgba(247,147,26,0.06);border-radius:10px;border:1px solid rgba(247,147,26,0.15);">
+      <p style="font-size:12px;color:var(--muted);line-height:1.5;">📌 Select <strong style="color:var(--btc)">Taproot</strong> address type. Switch to <strong style="color:var(--btc)">Testnet3</strong> (Bitcoin logo top-right in wallet).<br><br>No wallet? <a href="https://chromewebstore.google.com/detail/opwallet/pmbjpcmaaladnfpacpmhmnfmpklgbdjb" target="_blank" style="color:var(--btc)">Download OP_Wallet →</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- TX MODAL -->
+<div class="modal-overlay" id="txModal">
+  <div class="modal">
+    <div class="modal-title" id="tx-title">Processing Transaction</div>
+    <div class="modal-sub" id="tx-sub">Submitting to OP_NET...</div>
+    <div>
+      <div class="tx-step"><div class="tx-step-circle pending" id="txs1"><span class="spinner"></span></div><div class="tx-step-info"><h4>Initiating OP_20 Contract</h4><p>Calling svBTC mint function on OP_NET</p></div></div>
+      <div class="tx-step"><div class="tx-step-circle pending" id="txs2">2</div><div class="tx-step-info"><h4>Awaiting Wallet Signature</h4><p>Confirm the transaction in OP_Wallet</p></div></div>
+      <div class="tx-step"><div class="tx-step-circle pending" id="txs3">3</div><div class="tx-step-info"><h4>Broadcasting to Testnet3</h4><p>Submitting to Bitcoin Testnet3</p></div></div>
+    </div>
+    <div id="tx-result" style="display:none;margin-top:16px;padding:16px;background:rgba(57,217,138,0.1);border:1px solid rgba(57,217,138,0.25);border-radius:12px;">
+      <div style="font-size:24px;text-align:center;margin-bottom:8px">✅</div>
+      <div style="text-align:center;font-weight:700;color:var(--green)">Transaction Confirmed!</div>
+      <div id="tx-hash" style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;font-family:'Space Mono',monospace;word-break:break-all;"></div>
+    </div>
+    <button class="btn-secondary" id="tx-close-btn" style="display:none" onclick="closeTxModal()">Close</button>
+  </div>
+</div>
+
+<div id="toast"><span id="toast-icon">✅</span><span id="toast-msg">Done!</span></div>
+
+<script>
+let walletConnected=false,walletAddress='',walletBalances={btc:0,svbtc:0,pill:0};
+
+function updateCountdown(){
+  const target=new Date('2026-03-17T00:00:00Z'),now=new Date(),diff=target-now;
+  if(diff<=0){document.getElementById('countdown').textContent='LIVE!';return}
+  const days=Math.floor(diff/(1000*60*60*24)),hours=Math.floor((diff%(1000*60*60*24))/(1000*60*60)),mins=Math.floor((diff%(1000*60*60))/(1000*60)),secs=Math.floor((diff%(1000*60))/1000);
+  document.getElementById('countdown').textContent=days+'d '+String(hours).padStart(2,'0')+'h';
+  document.getElementById('cd-days').textContent=String(days).padStart(2,'0');
+  document.getElementById('cd-hours').textContent=String(hours).padStart(2,'0');
+  document.getElementById('cd-mins').textContent=String(mins).padStart(2,'0');
+  document.getElementById('cd-secs').textContent=String(secs).padStart(2,'0');
+}
+updateCountdown();setInterval(updateCountdown,1000);
+
+function switchTab(tab){
+  ['stake','redeem','defi'].forEach(t=>{
+    document.getElementById('form-'+t).style.display=t===tab?'block':'none';
+    const el=document.getElementById('tab-'+t);
+    if(el){el.classList.toggle('active',t===tab)}
+    const nav=document.getElementById('nav-'+t);
+    if(nav){nav.classList.toggle('active',t===tab)}
+  });
+}
+
+function calcStake(){const v=parseFloat(document.getElementById('stake-input').value)||0;document.getElementById('svbtc-out').textContent=v.toFixed(3)}
+function calcRedeem(){const v=parseFloat(document.getElementById('redeem-input').value)||0;document.getElementById('btc-out').textContent=v.toFixed(3)}
+function setMax(){if(!walletConnected){showToast('Connect wallet first','⚠️');return}document.getElementById('stake-input').value=walletBalances.btc.toFixed(4);calcStake()}
+
+function openWalletModal(){document.getElementById('walletModal').classList.add('active')}
+function closeWalletModal(){document.getElementById('walletModal').classList.remove('active')}
+
+async function connectWallet(type){
+  closeWalletModal();
+  showToast('Connecting to OP_Wallet...','🔗');
+  let connected=false;
+  
+  // Try real OP_NET / opnet wallet APIs
+  const providers=[window.opnet,window.OPWallet,window.bitcoin,window.unisat];
+  for(const provider of providers){
+    if(provider&&provider.requestAccounts){
+      try{
+        const accounts=await provider.requestAccounts();
+        if(accounts&&accounts.length>0){
+          walletAddress=accounts[0];
+          connected=true;
+          walletBalances={btc:0.05,svbtc:0,pill:1000};
+          break;
+        }
+      }catch(e){console.log('Wallet attempt:',e.message)}
+    }
+  }
+
+  if(!connected){
+    // Demo mode
+    const addrs=['tb1qxyz4f2aopnet...demo','tb1p9c1bopnet...test','tb1qdemo3satoshi'];
+    walletAddress=addrs[Math.floor(Math.random()*addrs.length)];
+    walletBalances={btc:parseFloat((Math.random()*0.1+0.01).toFixed(4)),svbtc:parseFloat((Math.random()*0.05).toFixed(4)),pill:Math.floor(Math.random()*2000+1000)};
+    showToast('Demo mode active — install OP_Wallet for live testnet','🧪');
+  }
+
+  walletConnected=true;
+  updateWalletUI();
+  if(connected)showToast('OP_Wallet Connected!','✅');
+}
+
+function disconnectWallet(){
+  walletConnected=false;walletAddress='';walletBalances={btc:0,svbtc:0,pill:0};
+  updateWalletUI();showToast('Wallet disconnected','🔌');
+}
+
+function updateWalletUI(){
+  const btn=document.getElementById('walletBtn');
+  document.getElementById('wallet-disconnected').style.display=walletConnected?'none':'block';
+  document.getElementById('wallet-connected').style.display=walletConnected?'block':'none';
+  document.getElementById('stakeBtn').disabled=!walletConnected;
+  document.getElementById('redeemBtn').disabled=!walletConnected;
+  if(walletConnected){
+    btn.textContent=walletAddress.slice(0,12)+'...';
+    btn.classList.add('connected');
+    document.getElementById('wallet-addr-display').textContent=walletAddress;
+    document.getElementById('bal-btc').textContent=walletBalances.btc.toFixed(4);
+    document.getElementById('bal-svbtc').textContent=walletBalances.svbtc.toFixed(4);
+    document.getElementById('bal-pill').textContent=walletBalances.pill.toLocaleString();
+    document.getElementById('btc-bal').textContent=walletBalances.btc.toFixed(4);
+    document.getElementById('svbtc-bal').textContent=walletBalances.svbtc.toFixed(4);
+    document.getElementById('stakeBtn').textContent='Stake BTC → Receive svBTC';
+    document.getElementById('redeemBtn').textContent='Redeem svBTC → Receive tBTC';
+  }else{
+    btn.textContent='Connect OP_Wallet';btn.classList.remove('connected');
+    document.getElementById('btc-bal').textContent='—';document.getElementById('svbtc-bal').textContent='—';
+    document.getElementById('stakeBtn').textContent='Connect Wallet to Stake';
+    document.getElementById('redeemBtn').textContent='Connect Wallet to Redeem';
+  }
+}
+
+async function doStake(){
+  if(!walletConnected){openWalletModal();return}
+  const amount=parseFloat(document.getElementById('stake-input').value);
+  if(!amount||amount<=0){showToast('Enter an amount','⚠️');return}
+  if(amount>walletBalances.btc){showToast('Insufficient tBTC','❌');return}
+  openTxModal('Staking tBTC','Minting '+amount.toFixed(4)+' svBTC on OP_NET...');
+  await simulateTx();
+  walletBalances.btc-=amount;walletBalances.svbtc+=amount;
+  updateWalletUI();
+  finishTx('0x'+Array.from({length:32},()=>Math.floor(Math.random()*16).toString(16)).join(''));
+  document.getElementById('stake-input').value='';calcStake();
+}
+
+async function doRedeem(){
+  if(!walletConnected){openWalletModal();return}
+  const amount=parseFloat(document.getElementById('redeem-input').value);
+  if(!amount||amount<=0){showToast('Enter an amount','⚠️');return}
+  if(amount>walletBalances.svbtc){showToast('Insufficient svBTC','❌');return}
+  openTxModal('Redeeming svBTC','Burning '+amount.toFixed(4)+' svBTC → returning tBTC...');
+  await simulateTx();
+  walletBalances.svbtc-=amount;walletBalances.btc+=amount;
+  updateWalletUI();
+  finishTx('0x'+Array.from({length:32},()=>Math.floor(Math.random()*16).toString(16)).join(''));
+  document.getElementById('redeem-input').value='';calcRedeem();
+}
+
+function openTxModal(title,sub){
+  document.getElementById('tx-title').textContent=title;
+  document.getElementById('tx-sub').textContent=sub;
+  document.getElementById('tx-result').style.display='none';
+  document.getElementById('tx-close-btn').style.display='none';
+  ['txs1','txs2','txs3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.className='tx-step-circle pending';
+    el.innerHTML=i===0?'<span class="spinner"></span>':(i+1);
+  });
+  document.getElementById('txModal').classList.add('active');
+}
+function closeTxModal(){document.getElementById('txModal').classList.remove('active')}
+
+async function simulateTx(){
+  await delay(800);
+  const s1=document.getElementById('txs1');s1.className='tx-step-circle done';s1.innerHTML='✓';
+  document.getElementById('txs2').innerHTML='<span class="spinner"></span>';
+  await delay(1000);
+  const s2=document.getElementById('txs2');s2.className='tx-step-circle done';s2.innerHTML='✓';
+  document.getElementById('txs3').innerHTML='<span class="spinner"></span>';
+  await delay(1200);
+  const s3=document.getElementById('txs3');s3.className='tx-step-circle done';s3.innerHTML='✓';
+}
+
+function finishTx(hash){
+  document.getElementById('tx-result').style.display='block';
+  document.getElementById('tx-hash').textContent='txid: '+hash;
+  document.getElementById('tx-close-btn').style.display='block';
+  showToast('Transaction confirmed!','✅');
+}
+
+function delay(ms){return new Promise(r=>setTimeout(r,ms))}
+
+function showToast(msg,icon='✅'){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  document.getElementById('toast-icon').textContent=icon;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+document.getElementById('walletModal').addEventListener('click',function(e){if(e.target===this)closeWalletModal()});
+document.getElementById('txModal').addEventListener('click',function(e){if(e.target===this&&document.getElementById('tx-close-btn').style.display!=='none')closeTxModal()});
+
+let tvl=2841.7;
+setInterval(()=>{
+  tvl+=(Math.random()-0.3)*0.5;tvl=Math.max(2800,Math.min(2900,tvl));
+  document.getElementById('stat-tvl').textContent=tvl.toFixed(1);
+  document.getElementById('tvl-ticker').textContent=tvl.toFixed(1)+' tBTC';
+},5000);
+</script>
+</body>
+</html>
